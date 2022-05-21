@@ -22,6 +22,7 @@ class StorageUser(MyClass):
         else:
             i=0
         self.prop.update({"admin":i})
+        self.prop.update({"moderator":i})
         self.update_data()
         return i
     
@@ -37,11 +38,11 @@ class StorageUser(MyClass):
 
     def do_ban(self):
         i = 1
-        if self.prop.get("is_banned")==0:
+        if self.prop.get("banned")==0:
             i=1
         else:
             i=0
-        self.prop.update({"is_banned":i})
+        self.prop.update({"banned":i})
         self.update_data()
         return i
 

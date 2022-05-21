@@ -9,6 +9,7 @@ from aiogram.types import InlineQuery, \
 
 import db
 from model import storage
+import flow
 
 
 # log level
@@ -36,36 +37,19 @@ async def echo(message: types.Message):
     # await message.answer(message.text)
 
 @dp.inline_handler()
-async def inline_echo(inline_query: InlineQuery):
-
-    text = inline_query.query or 'echo'
-    input_content = InputTextMessageContent(text)
-    result_id: str = hashlib.md5(text.encode()).hexdigest()
-    items = []
-    if text.find("предложить в")==0:
-        item = InlineQueryResultArticle(
-            id=1,
-            title=f'Предложить в вещи',
-            input_message_content=InputTextMessageContent('Предложить в вещи'),
-        )
-        items.append(item)
-        item = InlineQueryResultArticle(
-            id=2,
-            title=f'Предложить в услуги',
-            input_message_content=InputTextMessageContent('Предложить в услуги'),
-        )
-        items.append(item)
-
-    else:
-        item = InlineQueryResultArticle(
-            id=result_id,
-            title=f'Result {text!r}',
-            input_message_content=input_content,
-        )
-        items.append(item)
-    # don't forget to set cache_time=1 for testing (default is 300s or 5m)
-    await bot.answer_inline_query(inline_query.id, results=items, cache_time=1)
-
+async def inline_result(inline_query: InlineQuery):
+    print("Новый запрос".center(60, "*"))
+    print(inline_query)
+    text = inline_query.query
+    # input_content = InputTextMessageContent(text)
+    # result_id: str = hashlib.md5(text.encode()).hexdigest()
+    user = storage.StorageUser( \
+        inline_query.from_user.id, \
+        inline_query.from_user.username)
+    
+    await bot.answer_inline_query(inline_query.id, \
+        results=flow.Flow(user, int(inline_query.id)).articles(text), \
+        cache_time=0)
 
 # run long-polling
 if __name__ == "__main__":
