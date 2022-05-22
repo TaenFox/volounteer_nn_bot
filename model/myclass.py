@@ -11,7 +11,7 @@ class MyClass:
     table = ""
     isnew = False
 
-    def __init__(self, id, table):
+    def __init__(self, id, table) -> None:
         self.id=id
         self.table=table
 

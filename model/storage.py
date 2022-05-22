@@ -1,5 +1,8 @@
+from re import L
 import sys 
+import copy
 import os.path
+from urllib.parse import uses_netloc
 from model import my_resource
 
 from model.myclass import MyClass 
@@ -59,7 +62,18 @@ class StoragePlace(MyClass):
         self.prop.update({"person":0})
         self.update_data()
 
-
+def get_users(name:str="", id:int=0):
+    users = []
+    lookname = ""
+    lookid = ""
+    if name!="":
+        lookname = f" and `name` like '%{name}%'"
+    if id!=0:
+        lookid = f" and `id` like '%{id}%'"
+    query = f'SELECT `id`, `name` FROM `{db.db_base}`.`storages` WHERE `person`=1{lookname}{lookid}'
+    print(query)
+    list_of_users = db.select(query)
+    return list_of_users
 
 
 

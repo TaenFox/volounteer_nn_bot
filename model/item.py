@@ -32,9 +32,13 @@ class Category(MyClass):
         if self.prop.get('parent')!=None:
             self.parent = Category(self.prop.get('parent'))
             self.pub_name = self.parent.pub_name + "->" + self.pub_name
+
     
+def get_items(all = False):
+    pass
+
 def get_categories():
-    a = []
+    categories = []
     for cat in db.select(f'SELECT `id` FROM `{db.db_base}`.`categories` a order by concat(if(isnull(a.`parent`),"",(select name from `{db.db_base}`.`categories` b where b.`id`=a.`parent`)), `name`)'):
-        a.append(Category(cat[0]))
-    return a
+        categories.append(Category(cat[0]))
+    return categories

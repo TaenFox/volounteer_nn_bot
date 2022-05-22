@@ -38,7 +38,7 @@ async def echo(message: types.Message):
 
 @dp.inline_handler()
 async def inline_result(inline_query: InlineQuery):
-    print("Новый запрос".center(60, "*"))
+    print("Новый запрос".center(60, "_"))
     print(inline_query)
     text = inline_query.query
     # input_content = InputTextMessageContent(text)
