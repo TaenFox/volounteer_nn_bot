@@ -1,13 +1,10 @@
-from ctypes.wintypes import PINT
 from aiogram.types import InlineQuery, \
     InputTextMessageContent, InlineQueryResultArticle, \
     InlineKeyboardMarkup, InlineKeyboardButton
-from click import command
-from psutil import users
 from model import *
 from model import storage
-from model.storage import StorageUser
-import urllib.parse
+from model.storage import StorageUser, StorageUser
+import json
 
 class Flow():
     i: int
@@ -15,7 +12,8 @@ class Flow():
     items = []
 
     def __init__(self, user: StorageUser,  res_id, run=False) -> None:
-        self.user = user
+        self.user = user.prop
+        self.user_id = self.user.get('tgid')
         self.run = run
 
         self.commands ={
@@ -56,7 +54,7 @@ class Flow():
             title=f'🔴 Это конструктор команд. Нажми на этот пункт для справки',
             input_message_content=InputTextMessageContent("/help"),
             ))
-        if self.user.prop.get("banned")==1:
+        if self.user.get("banned")==1:
             self.ap(InlineQueryResultArticle(
                 id=0,
                 title=f'💔 ты забанен',
@@ -79,7 +77,7 @@ class Flow():
             title=f'🔴 п - команды для пожертвований',
             input_message_content=InputTextMessageContent( \
                     self.com_error_mes('пожертвования')),))
-        if self.user.prop.get('moderator')==1:
+        if self.user.get('moderator')==1:
             self.ap(InlineQueryResultArticle(
                 id=self.commands.get("карточки"),
                 title=f'🔴 н - команды для карточек нуждающихся ',
@@ -95,7 +93,7 @@ class Flow():
                 title=f'🔴 х - команды для склада ',
                 input_message_content=InputTextMessageContent( \
                     self.com_error_mes('склад')),))
-        if self.user.prop.get('admin')==1:
+        if self.user.get('admin')==1:
             self.ap(InlineQueryResultArticle(
                 id=self.commands.get("пользователь"),
                 title=f'🔴 ю - команды для управления пользователями ',
@@ -114,7 +112,7 @@ class Flow():
             title=f'📃 список моих пожертвований',
             input_message_content=InputTextMessageContent( \
                 self.com_error_mes('пожертвования')),))
-        if self.user.prop.get('moderator')==1 or self.user.prop.get('admin')==1:
+        if self.user.get('moderator')==1 or self.user.get('admin')==1:
             self.ap(InlineQueryResultArticle(
                 id=self.commands.get("пожертвования - список всех"),
                 title=f'📰 посмотреть все пожертвования',
@@ -130,7 +128,7 @@ class Flow():
         # "пользователь - заглушка для двоеточия":510,
         # "пользователь - заглушка для указания пользователя":511,
 
-        if self.user.prop.get('admin')==1:
+        if self.user.get('admin')==1:
             if mes=='ю':
                 self.ap(InlineQueryResultArticle(
                     id=self.commands.get("пользователь - список всех"),
@@ -169,7 +167,6 @@ class Flow():
                         input_message_content=InputTextMessageContent(\
                             self.com_error_mes('указать пользователя')),))
                     if len(mes.split(":"))==2:
-                        print(f'Длина строки после: {len(mes.split(":")[1])}, числовая?: {mes.split(":")[1].isnumeric()}')
                         if len(mes.split(":")[1])>0:
                             if mes.split(":")[1].isnumeric():
                                 user_list = storage.get_users(id=mes.split(":")[1])
@@ -178,6 +175,12 @@ class Flow():
                         else:
                             user_list = storage.get_users()
                         # if len(user_list)==0: return
+                        mode={
+                            'а': 'Записать/выписать в администраторы',
+                            'м': 'Записать/выписать в модераторы',
+                            'б': 'Забанить/разбанить',
+                        }
+
                         i=-1
                         x=len(user_list)-1
                         if x>45:
@@ -186,13 +189,21 @@ class Flow():
                             i+=1
                             user_id = user_list[i][0]
                             user_name = user_list[i][1]
+                            obj_user = StorageUser(storage.get_tgid(user_id),user_name)
+                            button_calback_data = My_command(
+                                    self.user_id,
+                                    mes[:2],
+                                    "",
+                                    user_id
+                                ).compile()
                             self.ap(InlineQueryResultArticle(
                             id=1000000000000000+user_id,
                             title=f"👤 {user_name} id={user_id}",
-                            input_message_content=InputTextMessageContent(f"пользователь {user_name}"),
+                            input_message_content=InputTextMessageContent(obj_user.description_update()),
                             reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton(
-                                text='Показать',
-                                callback_data='test'))))
+                                text=mode.get(mes[1]),
+                                callback_data=button_calback_data
+                                ))))
                     
     def build_add_resource(self, mes):
         pass
@@ -202,6 +213,46 @@ class Flow():
         self.items.append(item)
 
     def com_error_mes(self, command):
-        return f'@{self.user.prop.get("name")} хотел(а) ввести команду `{command}`,' + \
+        return f'@{self.user.get("name")} хотел(а) ввести команду `{command}`,' + \
                                 ' но не ввел(а) команду полностью \n' + \
                                 'Пожалуйста, воспользуйся справкой /help'
+
+class My_command():
+    auth = ""
+    section = ""
+    context = ""
+    destination = ""
+    def __init__(self, auth="", section="", context="", destination="") -> None:
+        self.auth = auth
+        self.section = section
+        self.context = context
+        self.destination = destination
+        
+    def compile(self):
+        data = {
+            'a':self.auth,
+            's':self.section,
+            'c':self.context,
+            'd':self.destination
+        }
+        return json.dumps(data)
+    
+    def decompile(self, data):
+        array_data = {}
+        array_data = json.loads(data)
+        try:
+            if array_data.get('a') is None or \
+            array_data.get('s') is None or \
+            array_data.get('c') is None or \
+            array_data.get('d') is None:
+                raise Exception()
+            self.auth = int(array_data.get('a'))
+            self.section = array_data.get('s')
+            self.context = array_data.get('c')
+            self.destination = int(array_data.get('d'))
+        except:
+            print(f"Отсутствует атрибут команды в строке {data}\nТребуются: \n\
+    - 'a' - auth\n\
+    - 's' - section\n\
+    - 'c' - context\n\
+    - 'd' - destination\n")

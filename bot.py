@@ -5,7 +5,8 @@ import logging
 from model import item
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.types import InlineQuery, \
-    InputTextMessageContent, InlineQueryResultArticle
+    InputTextMessageContent, InlineQueryResultArticle, \
+    CallbackQuery
 
 import db
 from model import storage
@@ -19,7 +20,51 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=config.TOKEN)
 dp = Dispatcher(bot)
 
-#echo
+@dp.callback_query_handler()
+async def run_command(query: CallbackQuery):
+    data = flow.My_command()
+    data.decompile(query.data)
+    operator=storage.StorageUser(query.from_user.id, query.from_user.username)
+    operator_id=operator.prop.get('id')
+    is_admin = operator.prop.get('admin')
+    is_moderator = operator.prop.get('moderator')
+
+
+    #проверяем принадлежность кнопки для пользователя
+    if int(query.from_user.id)!=data.auth:
+        await bot.answer_callback_query(query.id, show_alert=True, text="Эта кнопка предназначена для другого пользователя")
+        return
+
+    #смотрим секцию
+    if data.section == 'п':
+        pass
+    if data.section == 'н':
+        pass
+    if data.section == 'з':
+        pass
+    if data.section == 'х':
+        pass
+
+#секция пользователь
+    if data.section[0] == 'ю':
+        if is_admin!=True:
+            await bot.answer_callback_query(query.id, show_alert=True, text="Для выполнения этой команды нужно быть администратором")
+            return
+        dest_user = storage.StorageUser(storage.get_tgid(data.destination),storage.get_tgname(data.destination))
+        #сделать админом
+        if data.section == 'юа':
+            dest_user.do_admin(operator_id)
+        #сделать модератором
+        if data.section == 'юм':
+            dest_user.do_moderator(operator_id)
+        #забанить пользователя
+        if data.section == 'юб':
+            dest_user.do_ban(operator_id)
+        await bot.answer_callback_query(query.id, show_alert=True, text=dest_user.description_update())
+        return
+    
+    await bot.answer_callback_query(query.id) 
+
 @dp.message_handler()
 async def echo(message: types.Message):
     print(message.text)

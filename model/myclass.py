@@ -37,7 +37,8 @@ class MyClass:
     def update_data(self):
                 
         query = ','.join([f'`{key}`="{value}"' for key, value in self.prop.items()]) 
-        db.cursor.execute(f"UPDATE `{db.db_base}`.`{self.table}` SET {query} WHERE `id` = {self.id}")
+        query = f"UPDATE `{db.db_base}`.`{self.table}` SET {query} WHERE `id` = {self.id}"
+        db.cursor.execute(query)
         db.conn.commit()
         
 # a = MyClass(8,'apples')
