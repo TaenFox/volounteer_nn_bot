@@ -10,6 +10,7 @@ import db
 
 class Item(MyClass):
     def __init__(self, id):
+        self.prop = {}
         super().__init__(id, "resources")
         if self.prop.get('category')== None:
             self.category = ""
@@ -27,11 +28,12 @@ class Item(MyClass):
 
 class Category(MyClass):
     def __init__(self, id):
+        self.prop = {}
         super().__init__(id, 'categories')
         self.pub_name = self.prop.get('name')
         if self.prop.get('parent')!=None:
             self.parent = Category(self.prop.get('parent'))
-            self.pub_name = self.parent.pub_name + "->" + self.pub_name
+            # self.pub_name = self.parent.pub_name + "->" + self.pub_name
 
     
 def get_items(all = False):

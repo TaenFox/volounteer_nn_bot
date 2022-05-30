@@ -13,6 +13,7 @@ import db
 class StorageUser(MyClass):
     description = ''
     def __init__(self, tgid, name):
+        self.prop = {}
         id = is_user_exist(tgid)
         super().__init__(id, 'storages')
         if id==0:
@@ -48,9 +49,19 @@ class StorageUser(MyClass):
         else:
             i=0
         self.prop.update({"admin":i})
-        history.do_history_storage('admin', i, auth_id)
+        history.History(
+            'storages',
+            self.prop.get('id'),
+            'admin', 
+            i, 
+            auth_id)
         self.prop.update({"moderator":i})
-        history.do_history_storage('moderator', i, auth_id)
+        history.History(
+            'storages',
+            self.prop.get('id'),
+            'moderator', 
+            i, 
+            auth_id)
         self.update_data()
         return i
     
@@ -61,7 +72,12 @@ class StorageUser(MyClass):
         else:
             i=0
         self.prop.update({"moderator":i})
-        history.History('storages', 'moderator', i, auth_id)
+        history.History(
+            'storages',
+            self.prop.get('id'),
+            'moderator', 
+            i, 
+            auth_id)
         self.update_data()
         return i
 
@@ -72,7 +88,12 @@ class StorageUser(MyClass):
         else:
             i=0
         self.prop.update({"banned":i})
-        history.History('storages', 'banned', i, auth_id)
+        history.History(
+            'storages',
+            self.prop.get('id'),
+            'banned', 
+            i, 
+            auth_id)
         self.update_data()
         return i
 
@@ -98,9 +119,13 @@ def get_users(name:str="", id:int=0):
     if id!=0:
         lookid = f" and `id` like '%{id}%'"
     query = f'SELECT `id`, `name` FROM `{db.db_base}`.`storages` WHERE `person`=1{lookname}{lookid}'
-    print(query)
     list_of_users = db.select(query)
-    return list_of_users
+    for user in list_of_users:
+        user_id = user[0]
+        user_name = user[1]
+        obj_user = StorageUser(get_tgid(user_id),user_name)
+        users.append(obj_user)
+    return users
 
 
 

@@ -4,7 +4,7 @@ from aiogram.types import InlineQuery, \
 from model import *
 from model import storage
 from model.storage import StorageUser, StorageUser
-import json
+import json, time
 
 class Flow():
     i: int
@@ -45,6 +45,16 @@ class Flow():
             "пользователь - сделать админом":509,
             "пользователь - заглушка для двоеточия":510,
             "пользователь - заглушка для указания пользователя":511,
+
+            "наименование":6,
+            "наименование - добавить":600,
+            "наименование - список всех":602,
+            # "наименование - удалить с заменой":603,
+            "категория":7,            
+            "категория - добавить":700,
+            "категория - список всех": 702,
+            # "категория - архивировать": 702
+            "категория - заглушка для двоеточия":710,
         }
 
     def articles(self,mes: str):
@@ -63,42 +73,38 @@ class Flow():
         if mes=="":
             self.build_start()
 
-        if mes.lower() == "п":
+        if mes.lower().find('п') == 0:
             self.build_resources()
             
         if mes.lower().find('ю') == 0:
             self.build_users(mes)
+
+        if mes.lower().find('н') == 0:
+            self.build_items(mes)
         return self.items
                
 
     def build_start(self):
-        self.ap(InlineQueryResultArticle(
-            id=self.commands.get("пожертвования"),
-            title=f'🔴 п - команды для пожертвований',
-            input_message_content=InputTextMessageContent( \
-                    self.com_error_mes('пожертвования')),))
+        arts = [
+            #доступ                  код команды      текст                                                              текст ошибки
+            [0,    self.commands.get("пожертвования"),"🔴 п - команды для пожертвований",             self.com_error_mes("пожертвования")],
+            [1,    self.commands.get("карточки"),     "🔴 н - команды для карточек нуждающихся",      self.com_error_mes("карточки нуждающихся")],
+            [1,    self.commands.get("запросы"),      "🔴 з - команды для запросов",                  self.com_error_mes("запросы")],
+            [1,    self.commands.get("склад"),        "🔴 х - команды для склада",                    self.com_error_mes("склад")],
+            [1,    self.commands.get("наименование"), "🔴 н - команды для справочника наименований",  self.com_error_mes("наименование")],
+            [2,    self.commands.get("пользователь"), "🔴 ю - команды для управления пользователями ",self.com_error_mes("пользователи")]
+        ]
+
+        for art in arts:
+            if art[0]==0: self.ap(InlineQueryResultArticle(id=art[1], title=art[2],input_message_content=InputTextMessageContent(art[3]),))
+
         if self.user.get('moderator')==1:
-            self.ap(InlineQueryResultArticle(
-                id=self.commands.get("карточки"),
-                title=f'🔴 н - команды для карточек нуждающихся ',
-                input_message_content=InputTextMessageContent( \
-                    self.com_error_mes('карточки нуждающихся')),))
-            self.ap(InlineQueryResultArticle(
-                id=self.commands.get("запросы"),
-                title=f'🔴 з - команды для запросов ',
-                input_message_content=InputTextMessageContent( \
-                    self.com_error_mes('запросы')),))
-            self.ap(InlineQueryResultArticle(
-                id=self.commands.get("склад"),
-                title=f'🔴 х - команды для склада ',
-                input_message_content=InputTextMessageContent( \
-                    self.com_error_mes('склад')),))
+            for art in arts:
+                if art[0]==1: self.ap(InlineQueryResultArticle(id=art[1], title=art[2],input_message_content=InputTextMessageContent(art[3]),))
+
         if self.user.get('admin')==1:
-            self.ap(InlineQueryResultArticle(
-                id=self.commands.get("пользователь"),
-                title=f'🔴 ю - команды для управления пользователями ',
-                input_message_content=InputTextMessageContent( \
-                    self.com_error_mes('пользователи')),))
+            for art in arts:
+                if art[0]==2: self.ap(InlineQueryResultArticle(id=art[1], title=art[2],input_message_content=InputTextMessageContent(art[3]),))            
         return
 
     def build_resources(self):
@@ -127,31 +133,28 @@ class Flow():
         # "пользователь - сделать админом":509,
         # "пользователь - заглушка для двоеточия":510,
         # "пользователь - заглушка для указания пользователя":511,
-
+        button_calback_data_get_all_users = My_command(
+                        self.user_id,
+                        'ю',
+                        'all',
+                        self.user.get('id')
+                    ).compile()
+        arts = [
+#доступ                  код команды                                текст                                                          текст ответа                              этап      текст кнопки     данные кнопки
+[2,    self.commands.get("пользователь - список всех"),             "📰 получить список пользователей",                           "Посмотреть список пользователей",        "ю",      "Показать",      button_calback_data_get_all_users],
+[2,    self.commands.get("пользователь - забанить"),                "🔴 б - забанить/разбанить пользователя",  self.com_error_mes("бан/разбан пользователя"),               "ю",      None,            None],
+[2,    self.commands.get("пользователь - сделать модератором"),     "🔴 м - дать/забрать права модератора",    self.com_error_mes("дать/забрать права модератора"),         "ю",      None,            None],
+[2,    self.commands.get("пользователь - сделать админом"),         "🔴 а - дать/забрать права админа",        self.com_error_mes("дать/забрать права админа"),             "ю",      None,            None],
+        ]
         if self.user.get('admin')==1:
             if mes=='ю':
-                self.ap(InlineQueryResultArticle(
-                    id=self.commands.get("пользователь - список всех"),
-                    title=f'📰 получить список пользователей',
-                    input_message_content=InputTextMessageContent("посмотреть список пользователей"),
-                    reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton(
-                        text='Показать',
-                        callback_data='test'))))
-                self.ap(InlineQueryResultArticle(
-                    id=self.commands.get("пользователь - забанить"),
-                    title=f'🔴 б - забанить/разбанить пользователя',
-                    input_message_content=InputTextMessageContent(\
-                        self.com_error_mes('бан/разбан пользователя')),))
-                self.ap(InlineQueryResultArticle(
-                    id=self.commands.get("пользователь - сделать модератором"),
-                    title=f'🔴 м - дать/забрать права модератора',
-                    input_message_content=InputTextMessageContent(\
-                        self.com_error_mes('дать/забрать права модератора')),))            
-                self.ap(InlineQueryResultArticle(
-                    id=self.commands.get("пользователь - сделать админом"),
-                    title=f'🔴 а - дать/забрать права админа',
-                    input_message_content=InputTextMessageContent(\
-                        self.com_error_mes('дать/забрать права админа')),))
+                for art in arts:
+                    if art[0]==2 and art[4]=="ю":
+                        if art[5] != None:
+                            self.ap(InlineQueryResultArticle(id=art[1], title=art[2],input_message_content=InputTextMessageContent(art[3]),reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton(text=art[5],callback_data=art[6]))))
+                        else:
+                            self.ap(InlineQueryResultArticle(id=art[1], title=art[2],input_message_content=InputTextMessageContent(art[3]),))
+
             if mes.find('юб')==0 or mes.find('юм')==0 or mes.find('юа')==0:
                 if len(mes)==2:
                     self.ap(InlineQueryResultArticle(
@@ -183,13 +186,14 @@ class Flow():
 
                         i=-1
                         x=len(user_list)-1
+                        obj_user: StorageUser
                         if x>45:
                             x=45
                         while i<x:
                             i+=1
-                            user_id = user_list[i][0]
-                            user_name = user_list[i][1]
-                            obj_user = StorageUser(storage.get_tgid(user_id),user_name)
+                            obj_user = user_list[i]
+                            user_id = obj_user.prop.get('id')
+                            user_name = obj_user.prop.get('name')
                             button_calback_data = My_command(
                                     self.user_id,
                                     mes[:2],
@@ -198,13 +202,82 @@ class Flow():
                                 ).compile()
                             self.ap(InlineQueryResultArticle(
                             id=1000000000000000+user_id,
-                            title=f"👤 {user_name} id={user_id}",
+                            title=f"👤 {user_name} id={obj_user.prop.get('tgid')}",
                             input_message_content=InputTextMessageContent(obj_user.description_update()),
                             reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton(
                                 text=mode.get(mes[1]),
                                 callback_data=button_calback_data
                                 ))))
                     
+    def build_items(self,mes:str):
+        # "наименование":6,
+        # "наименование - добавить":600,
+        # "наименование - список всех":602,
+        # "категория - добавить":700,
+        # "категория - список всех": 702
+        # "наименование - удалить с заменой":603,
+
+        is_admin = self.user.get('admin')
+        # is_moder = self.user.get('moderator')
+
+        button_calback_data_get_all_items = My_command(self.user_id, 'нн', 'all', self.user.get('id')).compile()
+        button_calback_data_get_all_cats =  My_command(self.user_id, 'нк', 'all', self.user.get('id')).compile()
+        button_calback_data_new_category = My_command(self.user_id,  'нк', 'new', 0).compile()
+        arts = [
+#доступ                  код команды                                текст                                                          текст ответа                              этап      текст кнопки     данные кнопки
+[2,    self.commands.get("наименование - список всех"),             "📰 Показать список всех наименований",                        "Показать все наименования",              "н",      "Показать",      button_calback_data_get_all_items],
+[2,    self.commands.get("наименование - добавить"),                "🔴 н - добавить наименование",             self.com_error_mes("добавить наименование"),                 "н",      None,            None],
+[2,    self.commands.get("категория"),                              "🔴 к - команды для категорий",             self.com_error_mes("категория"),                             "н",      None,            None],
+[2,    self.commands.get("категория - список всех"),                "📰 Показать список всех категорий",                           "Показать все категории",                 "нк",     "Показать",      button_calback_data_get_all_cats],
+[2,    self.commands.get("категория - добавить"),                   "🔴 н - добавить категорию",                self.com_error_mes("категория - добавить"),                  "нк",     None,            None],
+[2,    self.commands.get("категория - заглушка для двоеточия"),     "🔴 напиши \":\" (двоеточие) чтобы указать название категории", 
+                                                                                                                self.com_error_mes("категория - добавить"),                  "нкн",     None,            None],
+        ]
+        if is_admin==True:
+            
+            if mes=="н":
+                for art in arts:
+                    if art[0]==2 and art[4]=="н":
+                        if art[5] != None:
+                            self.ap(InlineQueryResultArticle(id=art[1], title=art[2],input_message_content=InputTextMessageContent(art[3]),reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton(text=art[5],callback_data=art[6]))))
+                        else:
+                            self.ap(InlineQueryResultArticle(id=art[1], title=art[2],input_message_content=InputTextMessageContent(art[3]),))
+
+            if mes=='нк':   #наименование - категория
+                for art in arts:
+                    if art[0]==2 and art[4]=="нк":
+                        if art[5] != None:
+                            self.ap(InlineQueryResultArticle(id=art[1], title=art[2],input_message_content=InputTextMessageContent(art[3]),reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton(text=art[5],callback_data=art[6]))))
+                        else:
+                            self.ap(InlineQueryResultArticle(id=art[1], title=art[2],input_message_content=InputTextMessageContent(art[3]),))
+
+            if mes.find('нкн')==0:  # добавить категорию
+                if mes == 'нкн':
+                    for art in arts:
+                        if art[0]==2 and art[4]=="нкн":
+                            self.ap(InlineQueryResultArticle(id=art[1], title=art[2],input_message_content=InputTextMessageContent(art[3]),))
+
+                if len(mes)>3 and mes[3]==":":
+                    if len(mes.split(":"))==2:
+                        answer = mes.split(':')[1]
+                        print(answer)
+                        if answer=='': 
+                            answer='Начни вводить название категории'
+                            self.ap(InlineQueryResultArticle(
+                            id=str(self.commands.get("категория - добавить"))+str(round(time.time()*100)),
+                            title=f"🔴 {answer}",
+                            input_message_content=InputTextMessageContent( \
+                                self.com_error_mes('категория - добавить')),))
+                        else:
+                            self.ap(InlineQueryResultArticle(
+                            id=str(self.commands.get("категория - добавить"))+str(round(time.time()*100)),
+                            title=f"➕ добавить категорию {answer}",
+                            input_message_content=InputTextMessageContent(answer),
+                            reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton(
+                                text='Добавить категорию',
+                                callback_data=button_calback_data_new_category
+                                ))))
+
     def build_add_resource(self, mes):
         pass
 

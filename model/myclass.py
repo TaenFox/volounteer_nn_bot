@@ -1,4 +1,3 @@
-from operator import truediv
 import sys 
 import os.path 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..") 
@@ -20,6 +19,7 @@ class MyClass:
             self.id= db.cursor.lastrowid
             db.conn.commit()
             id = self.id
+            self.isnew = True
         db.cursor.execute(f"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name='{table}'")
         fields = db.cursor.fetchall()
         columns = []
@@ -28,11 +28,11 @@ class MyClass:
         column_query = ", ".join(columns)
         db.cursor.execute(f"SELECT {column_query} FROM {db.db_base}.{table} WHERE ID = {id}")
         data = db.cursor.fetchone()
-
-        i = -1
-        for field in fields:
-            i += 1
-            self.prop.update({field[0]:data[i]})
+        if self.isnew == False:
+            i = -1
+            for field in fields:
+                i += 1
+                self.prop.update({field[0]:data[i]})
 
     def update_data(self):
                 
