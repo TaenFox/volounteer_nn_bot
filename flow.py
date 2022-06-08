@@ -3,6 +3,7 @@ from aiogram.types import InlineQuery, \
     InlineKeyboardMarkup, InlineKeyboardButton
 from model import *
 from model import storage
+from model import item
 from model.storage import StorageUser, StorageUser
 import json, time
 
@@ -11,10 +12,11 @@ class Flow():
     run = False
     items = []
 
-    def __init__(self, user: StorageUser,  res_id, run=False) -> None:
+    def __init__(self, user: StorageUser, run=False, data="") -> None:
         self.user = user.prop
         self.user_id = self.user.get('tgid')
-        self.run = run
+        # self.run = run
+        # self.data = My_command().decompile(data)
 
         self.commands ={
             "помощь": 0,
@@ -55,6 +57,7 @@ class Flow():
             "категория - список всех": 702,
             # "категория - архивировать": 702
             "категория - заглушка для двоеточия":710,
+            "категория - заглушка для двоеточия2":711,
         }
 
     def articles(self,mes: str):
@@ -230,8 +233,10 @@ class Flow():
 [2,    self.commands.get("категория"),                              "🔴 к - команды для категорий",             self.com_error_mes("категория"),                             "н",      None,            None],
 [2,    self.commands.get("категория - список всех"),                "📰 Показать список всех категорий",                           "Показать все категории",                 "нк",     "Показать",      button_calback_data_get_all_cats],
 [2,    self.commands.get("категория - добавить"),                   "🔴 н - добавить категорию",                self.com_error_mes("категория - добавить"),                  "нк",     None,            None],
-[2,    self.commands.get("категория - заглушка для двоеточия"),     "🔴 напиши \":\" (двоеточие) чтобы указать название категории", 
+[2,    self.commands.get("категория - заглушка для двоеточия"),     "🔴 \":\" чтобы указать название категории", 
                                                                                                                 self.com_error_mes("категория - добавить"),                  "нкн",     None,            None],
+[2,    self.commands.get("категория - заглушка для двоеточия2"),    "🔴 \":\" чтобы указать название родительской категории", 
+                                                                                                                self.com_error_mes("подкатегория - добавить"),               "нкн2",    None,            None],
         ]
         if is_admin==True:
             
@@ -269,6 +274,9 @@ class Flow():
                             input_message_content=InputTextMessageContent( \
                                 self.com_error_mes('категория - добавить')),))
                         else:
+                            for art in arts:
+                                if art[0]==2 and art[4]=="нкн2":
+                                    self.ap(InlineQueryResultArticle(id=art[1], title=art[2],input_message_content=InputTextMessageContent(art[3]),))
                             self.ap(InlineQueryResultArticle(
                             id=str(self.commands.get("категория - добавить"))+str(round(time.time()*100)),
                             title=f"➕ добавить категорию {answer}",
@@ -277,13 +285,48 @@ class Flow():
                                 text='Добавить категорию',
                                 callback_data=button_calback_data_new_category
                                 ))))
+                    if len(mes.split(":"))==3:
+                        answer = mes.split(':')[1]
+                        print(answer)
+                        if answer=='': 
+                            answer='Начни вводить название категории'
+                            self.ap(InlineQueryResultArticle(
+                            id=str(self.commands.get("категория - добавить"))+str(round(time.time()*100)),
+                            title=f"🔴 {answer}",
+                            input_message_content=InputTextMessageContent( \
+                                self.com_error_mes('категория - добавить')),))
+                        else:
+                            par_cat = item.get_categories(name = mes.split(":")[2])
+                            i = 0
+                            x=len(par_cat)-1
+                            obj_cat: item.Category
+                            if x>45:
+                                x=45
+                            while i<x:
+                                i+=1
+                                obj_cat = par_cat[i]
+                                button_calback_data_new_sub_category = My_command(
+                                    self.user_id,
+                                    "нк",
+                                    "new_sub",
+                                    obj_cat.id
+                                ).compile()
+                                self.ap(InlineQueryResultArticle(
+                                id=str(self.commands.get("категория - добавить"))+str((time.time()%1))[2:],
+                                title=f"➕ добавить категорию {answer} в категорию {obj_cat.prop.get('name')}",
+                                input_message_content=InputTextMessageContent(answer),
+                                reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton(
+                                    text='Добавить подкатегорию',
+                                    callback_data=button_calback_data_new_sub_category
+                                    ))))
 
     def build_add_resource(self, mes):
         pass
 
     def ap(self, item:InlineQueryResultArticle):
-        print(item)
-        self.items.append(item)
+        if self.run== False:
+            print(item)
+            self.items.append(item)
 
     def com_error_mes(self, command):
         return f'@{self.user.get("name")} хотел(а) ввести команду `{command}`,' + \

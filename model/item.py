@@ -39,8 +39,23 @@ class Category(MyClass):
 def get_items(all = False):
     pass
 
-def get_categories():
+def get_categories(name:str="", id:int=0):
     categories = []
-    for cat in db.select(f'SELECT `id` FROM `{db.db_base}`.`categories` a order by concat(if(isnull(a.`parent`),"",(select name from `{db.db_base}`.`categories` b where b.`id`=a.`parent`)), `name`)'):
+    lookname = ""
+    lookid = ""
+    subquery = ""
+    if name!="":
+        lookname = f"`name` like '%{name}%' "
+    if id!=0:
+        lookid = f"`id` like '%{id}%' "
+    if lookname!="":
+        subquery = f"WHERE " + lookname
+    if lookid != "":
+        if subquery != "":
+            subquery = subquery + lookid
+        else:
+            subquery = f"WHERE " + lookid            
+    query = f'SELECT `id` FROM `{db.db_base}`.`categories` a {subquery} order by concat(if(isnull(a.`parent`),"",(select name from `{db.db_base}`.`categories` b where b.`id`=a.`parent`)), `name`)'
+    for cat in db.select(query):
         categories.append(Category(cat[0]))
     return categories

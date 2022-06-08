@@ -6,10 +6,10 @@ from model import item
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.types import InlineQuery, \
     InputTextMessageContent, InlineQueryResultArticle, \
-    CallbackQuery
+    CallbackQuery, ChosenInlineResult, Message
 
 import db
-from model import storage
+from model import storage, history
 import flow
 
 
@@ -20,6 +20,11 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=config.TOKEN)
 dp = Dispatcher(bot)
 
+@dp.chosen_inline_handler(lambda chosen_inline_result: True)
+async def some_chosen_inline_handler(chosen_inline_result: types.ChosenInlineResult):
+    history.Payload(chosen_inline_result.inline_message_id, chosen_inline_result.query, chosen_inline_result.result_id)
+    history.Payload.terminate_old()
+
 @dp.callback_query_handler()
 async def run_command(query: CallbackQuery):
     data = flow.My_command()
@@ -28,6 +33,7 @@ async def run_command(query: CallbackQuery):
     operator_id=operator.prop.get('id')
     is_admin = operator.prop.get('admin')
     is_moderator = operator.prop.get('moderator')
+    button_payload = history.Payload(inline_message_id=query.inline_message_id)
 
 
     #проверяем принадлежность кнопки для пользователя
@@ -62,12 +68,35 @@ async def run_command(query: CallbackQuery):
             await bot.answer_callback_query(query.id) 
             return
         if data.context == 'new':
-            new_cat_name = query.message.text
+            new_cat_name = button_payload.prop.get('query')
+            try:
+                new_cat_name = new_cat_name.split(':')[1]
+            except:
+                await bot.answer_callback_query(query.id, show_alert=True, text='Что-то пошло не так. Попробуй не нажимать эту же кнопку, а запросить новую')
+                await bot.answer_callback_query(query.id)
+                return
             obj_cat = item.Category(0)
             obj_cat.prop.update({'name':new_cat_name})
             obj_cat.update_data()
-            answer_text = f'Категория {new_cat_name} добавлена\nid = {obj_cat.prop.get("id")}'
+            answer_text = f'Категория {new_cat_name} добавлена\nid = {obj_cat.id}'
             await bot.answer_callback_query(query.id, show_alert=True, text=answer_text)
+            button_payload.terminate()
+        if data.context == 'new_sub':
+            new_cat_name = button_payload.prop.get('query')
+            try:
+                new_cat_name = new_cat_name.split(':')[1]
+            except:
+                await bot.answer_callback_query(query.id, show_alert=True, text='Что-то пошло не так. Попробуй не нажимать эту же кнопку, а запросить новую')
+                await bot.answer_callback_query(query.id)
+                return
+            obj_cat = item.Category(0)
+            obj_cat.prop.update({'name':new_cat_name})
+            obj_cat.prop.update({'parent':data.destination})
+            obj_cat.update_data()
+            par_cat = item.Category(data.destination)
+            answer_text = f'Категория {new_cat_name} добавлена\nid = {obj_cat.id}\nНазвание родительской категории: {par_cat.prop.get("name")}'
+            await bot.answer_callback_query(query.id, show_alert=True, text=answer_text)
+            button_payload.terminate()
 
     if data.section == 'з':
         pass

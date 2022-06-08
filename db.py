@@ -24,7 +24,7 @@ except mysql.connector.Error as err:
   else:
     print(err)
 else:
-  cursor = conn.cursor()
+  cursor = conn.cursor(buffered=True)
 
 def select(expression):
   cursor.execute(expression)
