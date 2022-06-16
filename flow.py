@@ -51,6 +51,8 @@ class Flow():
             "наименование":6,
             "наименование - добавить":600,
             "наименование - список всех":602,
+            "наименование - заглушка для двоеточия":610,
+            "наименование - заглушка для двоеточия2":611,
             # "наименование - удалить с заменой":603,
             "категория":7,            
             "категория - добавить":700,
@@ -224,13 +226,18 @@ class Flow():
         # is_moder = self.user.get('moderator')
 
         button_calback_data_get_all_items = My_command(self.user_id, 'нн', 'all', self.user.get('id')).compile()
+        button_calback_data_new_items =     My_command(self.user_id, 'нн', 'new', 0).compile()
         button_calback_data_get_all_cats =  My_command(self.user_id, 'нк', 'all', self.user.get('id')).compile()
-        button_calback_data_new_category = My_command(self.user_id,  'нк', 'new', 0).compile()
+        button_calback_data_new_category =  My_command(self.user_id, 'нк', 'new', 0).compile()
         arts = [
 #доступ                  код команды                                текст                                                          текст ответа                              этап      текст кнопки     данные кнопки
 [2,    self.commands.get("наименование - список всех"),             "📰 Показать список всех наименований",                        "Показать все наименования",              "н",      "Показать",      button_calback_data_get_all_items],
 [2,    self.commands.get("наименование - добавить"),                "🔴 н - добавить наименование",             self.com_error_mes("добавить наименование"),                 "н",      None,            None],
 [2,    self.commands.get("категория"),                              "🔴 к - команды для категорий",             self.com_error_mes("категория"),                             "н",      None,            None],
+[2,    self.commands.get("наименование - заглушка для двоеточия"),  "🔴 \":\" чтобы указать наименование", 
+                                                                                                                self.com_error_mes("наименование - добавить"),                "нн",    None,            None],
+[2,    self.commands.get("наименование - заглушка для двоеточия2"), "🔴 \":\" чтобы указать категорию", 
+                                                                                                                self.com_error_mes("наименование - добавить"),                "нн2",   None,            None],
 [2,    self.commands.get("категория - список всех"),                "📰 Показать список всех категорий",                           "Показать все категории",                 "нк",     "Показать",      button_calback_data_get_all_cats],
 [2,    self.commands.get("категория - добавить"),                   "🔴 н - добавить категорию",                self.com_error_mes("категория - добавить"),                  "нк",     None,            None],
 [2,    self.commands.get("категория - заглушка для двоеточия"),     "🔴 \":\" чтобы указать название категории", 
@@ -247,6 +254,63 @@ class Flow():
                             self.ap(InlineQueryResultArticle(id=art[1], title=art[2],input_message_content=InputTextMessageContent(art[3]),reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton(text=art[5],callback_data=art[6]))))
                         else:
                             self.ap(InlineQueryResultArticle(id=art[1], title=art[2],input_message_content=InputTextMessageContent(art[3]),))
+            if mes.find('нн')==0:  # добавить наименование
+                if mes == 'нн':
+                    for art in arts:
+                        if art[0]==2 and art[4]=="нн":
+                            self.ap(InlineQueryResultArticle(id=art[1], title=art[2],input_message_content=InputTextMessageContent(art[3]),))
+
+                if len(mes)>2 and mes[2]==":":
+                    if len(mes.split(":"))==2:
+                        answer = mes.split(':')[1]
+                        print(answer)
+                        if answer=='': 
+                            answer='Начни вводить наименования'
+                            self.ap(InlineQueryResultArticle(
+                            id=str(self.commands.get("наименование - добавить"))+str(round(time.time()*100)),
+                            title=f"🔴 {answer}",
+                            input_message_content=InputTextMessageContent( \
+                                self.com_error_mes('наименование - добавить')),))
+                        else:
+                            for art in arts:
+                                if art[0]==2 and art[4]=="нн2":
+                                    self.ap(InlineQueryResultArticle(id=art[1], title=art[2],input_message_content=InputTextMessageContent(art[3]),))
+                            self.ap(InlineQueryResultArticle(
+                            id=str(self.commands.get("наименование - добавить"))+str(round(time.time()*100)),
+                            title=f"🔴 добавить {answer}",
+                            input_message_content=InputTextMessageContent(answer),
+                            reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton(
+                                text='Добавить наименование',
+                                callback_data=button_calback_data_new_category
+                                ))))
+
+                    if len(mes.split(":"))==3:
+                        for art in arts:
+                            if art[0]==2 and art[4]=="нн2":
+                                self.ap(InlineQueryResultArticle(id=art[1], title=art[2],input_message_content=InputTextMessageContent(art[3]),))
+                        self.ap(InlineQueryResultArticle(
+                        id=str(self.commands.get("наименование - добавить"))+str(round(time.time()*100)),
+                        title=f"🔴 укажи id категории для \'{answer}\'",
+                        input_message_content=InputTextMessageContent( \
+                            self.com_error_mes('наименование - добавить')),))
+
+                        par_cat = item.get_categories(name = mes.split(":")[2])
+                        i = 0
+                        x=len(par_cat)-1
+                        obj_cat: item.Category
+                        if x>45:
+                            x=45
+                        while i<x:
+                            i+=1
+                            obj_cat = par_cat[i]
+                            self.ap(InlineQueryResultArticle(
+                            id=str(self.commands.get("категория - добавить"))+str((time.time()%1))[2:],
+                            title=f"➕ добавить наименование {answer} в категорию {obj_cat.prop.get('name')}",
+                            input_message_content=InputTextMessageContent(answer),
+                            reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton(
+                                text='Добавить наименование',
+                                callback_data=button_calback_data_new_items
+                                ))))
 
             if mes=='нк':   #наименование - категория
                 for art in arts:
